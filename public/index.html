@@ -54,6 +54,27 @@
     </footer>
   </dialog>
 
+  <dialog id="colheitaDialog" aria-labelledby="colheitaTitle">
+    <form id="colheitaForm" novalidate>
+      <header class="dialog-head">
+        <h2 id="colheitaTitle">Registrar colheita</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">✕</button>
+      </header>
+      <div class="form-error" id="colheitaError" role="alert" hidden></div>
+      <div class="form-grid">
+        <div class="form-field full">
+          <label for="colheitaKg">Quantidade colhida (kg) <span class="req" aria-hidden="true">*</span></label>
+          <input class="input" id="colheitaKg" type="number" step="any" min="0" required>
+          <span class="muted" style="font-size:12.5px">Executa a stored procedure <code>sp_registrar_colheita</code>, que valida e grava a colheita no MySQL.</span>
+        </div>
+      </div>
+      <footer class="dialog-foot">
+        <button type="button" class="btn ghost" data-close>Cancelar</button>
+        <button type="submit" class="btn primary">Registrar</button>
+      </footer>
+    </form>
+  </dialog>
+
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <script src="vendor/chart.umd.js"></script>
@@ -61,6 +82,7 @@
   <script src="js/format.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/resource.js"></script>
+  <script src="js/relatorios.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
