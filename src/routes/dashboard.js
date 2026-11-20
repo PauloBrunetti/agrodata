@@ -27,7 +27,23 @@ const QUERIES = [
   (SELECT COUNT(*) FROM ocorrencia_praga o JOIN ${BASE_SAFRA} ON s.id_safra = o.id_safra
      WHERE o.nivel_infestacao = 'alto' /*F*/) AS ocorrencias_nivel_alto,
   (SELECT COUNT(*) FROM recomendacao_manejo r JOIN ${BASE_SAFRA} ON s.id_safra = r.id_safra
-     WHERE r.status = 'pendente' /*F*/) AS recomendacoes_pendentes`,
+     WHERE r.status = 'pendente' /*F*/) AS recomendacoes_pendentes,
+  (SELECT COALESCE(SUM(s.quantidade_colhida_kg), 0) FROM ${BASE_SAFRA} WHERE s.quantidade_colhida_kg IS NOT NULL /*F*/) AS producao_colhida_kg,
+  (SELECT ROUND(AVG(100 * (s.quantidade_colhida_kg / t.area_ha) / c.rendimento_esperado_kg_ha), 1)
+     FROM ${BASE_SAFRA} JOIN cultivo c ON c.id_cultivo = s.id_cultivo
+    WHERE s.quantidade_colhida_kg IS NOT NULL /*F*/) AS produtividade_media_pct,
+  (SELECT COALESCE(SUM(t.area_ha), 0) FROM ${BASE_SAFRA} WHERE s.quantidade_colhida_kg IS NULL /*F*/) AS area_em_cultivo_ha`,
+  },
+  {
+    id: 'agua_por_metodo',
+    titulo: 'Uso de água por método de irrigação (participação no total)',
+    sql: `SELECT i.metodo, COUNT(*) AS eventos, SUM(i.volume_m3) AS volume_m3,
+       ROUND(100 * SUM(i.volume_m3) / SUM(SUM(i.volume_m3)) OVER (), 1) AS pct
+FROM irrigacao i
+JOIN ${BASE_SAFRA} ON s.id_safra = i.id_safra
+WHERE 1=1 /*F*/
+GROUP BY i.metodo
+ORDER BY volume_m3 DESC`,
   },
   {
     id: 'consumo_por_talhao',
