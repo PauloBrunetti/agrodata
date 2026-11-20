@@ -37,11 +37,30 @@ describe('infraestrutura', () => {
     assert.match(res.body.mysql.versao, /^8\./);
   });
 
-  test('banco possui as 17 tabelas do modelo', async () => {
-    const rows = await query(
+  test('banco possui as 17 tabelas do modelo + auditoria, views, triggers e procedures', async () => {
+    const [t] = await query(
       "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'"
     );
-    assert.equal(rows[0].n, 17);
+    assert.equal(t.n, 18);
+    const [v] = await query("SELECT COUNT(*) AS n FROM information_schema.views WHERE table_schema = DATABASE()");
+    assert.equal(v.n, 3);
+    const [tr] = await query('SELECT COUNT(*) AS n FROM information_schema.triggers WHERE trigger_schema = DATABASE()');
+    assert.equal(tr.n, 16);
+    const [r] = await query('SELECT COUNT(*) AS n FROM information_schema.routines WHERE routine_schema = DATABASE()');
+    assert.equal(r.n, 4);
+  });
+
+  test('carga de demonstração não gera auditoria nem recomendações automáticas', async () => {
+    const [a] = await query('SELECT COUNT(*) AS n FROM auditoria');
+    assert.equal(a.n, 0);
+    const [r] = await query("SELECT COUNT(*) AS n FROM recomendacao_manejo WHERE descricao LIKE '[automática]%'");
+    assert.equal(r.n, 0);
+  });
+
+  test('reaplicar os objetos do banco é idempotente', async () => {
+    await initDatabase({ onlyIfEmpty: true, seed: true, log: () => {} });
+    const [p] = await query('SELECT COUNT(*) AS n FROM propriedade');
+    assert.equal(p.n, 3);
   });
 
   test('seed não contém duplicatas de propriedade/talhão', async () => {
@@ -195,6 +214,80 @@ describe('irrigação, safras e regras de negócio', () => {
     const res = await request(app).get('/api/safras/options').expect(200);
     assert.ok(res.body.length >= 9);
     assert.match(res.body[0].label, /^#\d+ /);
+  });
+});
+
+describe('triggers, procedures e auditoria', () => {
+  test('trigger bloqueia irrigação antes do plantio (SIGNAL → 400)', async () => {
+    const res = await request(app).post('/api/irrigacoes')
+      .send({ id_safra: 5, data_hora: '2026-09-01T07:00', volume_m3: 10, duracao_min: 5, metodo: 'sulco' })
+      .expect(400);
+    assert.match(res.body.error, /anterior ao plantio/);
+  });
+
+  test('trigger de auditoria registra INSERT, UPDATE e DELETE com antes/depois', async () => {
+    const criado = await request(app).post('/api/irrigacoes')
+      .send({ id_safra: 7, data_hora: '2026-11-18 06:30', volume_m3: 100, duracao_min: 30, metodo: 'aspersao' }).expect(201);
+    const id = criado.body.id_irrigacao;
+    await request(app).patch(`/api/irrigacoes/${id}`).send({ volume_m3: 150 }).expect(200);
+    await request(app).delete(`/api/irrigacoes/${id}`).expect(204);
+    const res = await request(app).get('/api/auditoria').query({ tabela: 'irrigacao' }).expect(200);
+    const ops = res.body.data.filter((r) => r.id_registro === id).map((r) => r.operacao).sort();
+    assert.deepEqual(ops, ['DELETE', 'INSERT', 'UPDATE']);
+    const upd = res.body.data.find((r) => r.id_registro === id && r.operacao === 'UPDATE');
+    assert.equal(JSON.parse(upd.dados_antigos).volume_m3, 100);
+    assert.equal(JSON.parse(upd.dados_novos).volume_m3, 150);
+  });
+
+  test('auditoria é somente leitura na API (405)', async () => {
+    await request(app).post('/api/auditoria').send({}).expect(405);
+    await request(app).delete('/api/auditoria/1').expect(405);
+  });
+
+  test('ocorrência de nível alto gera recomendação automática', async () => {
+    await request(app).post('/api/ocorrencias')
+      .send({ id_safra: 7, id_praga: 3, data_identificacao: '2026-11-18', nivel_infestacao: 'alto' }).expect(201);
+    const rows = await query("SELECT * FROM recomendacao_manejo WHERE id_safra = 7 AND tipo = 'aplicar_defensivo' AND descricao LIKE '[automática]%'");
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].prioridade, 'alta');
+  });
+
+  test('umidade abaixo do ideal gera uma única recomendação de irrigar', async () => {
+    // sensor 1 está no Talhão A (safra 4, tomate, ideal 70%)
+    await request(app).post('/api/leituras').send({ id_sensor: 1, data_hora: '2026-11-19 06:00', valor: 58 }).expect(201);
+    await request(app).post('/api/leituras').send({ id_sensor: 1, data_hora: '2026-11-19 18:00', valor: 57 }).expect(201);
+    await request(app).post('/api/leituras').send({ id_sensor: 1, data_hora: '2026-11-20 06:00', valor: 69 }).expect(201);
+    const rows = await query("SELECT * FROM recomendacao_manejo WHERE id_safra = 4 AND tipo = 'irrigar' AND status = 'pendente'");
+    assert.equal(rows.length, 1);
+  });
+
+  test('procedure sp_consumo_agua_periodo filtra por propriedade e período', async () => {
+    const res = await request(app).get('/api/relatorios/consumo-agua')
+      .query({ id_propriedade: 2, de: '2026-08-01', ate: '2026-11-30' }).expect(200);
+    assert.ok(res.body.data.every((r) => r.propriedade === 'Sítio Vale Verde'));
+    const [esperado] = await query(
+      `SELECT SUM(i.volume_m3) v FROM irrigacao i JOIN safra s ON s.id_safra = i.id_safra JOIN talhao t ON t.id_talhao = s.id_talhao
+       WHERE t.id_propriedade = 2 AND DATE(i.data_hora) BETWEEN '2026-08-01' AND '2026-11-30'`
+    );
+    assert.equal(res.body.data.reduce((a, r) => a + r.volume_m3, 0), esperado.v);
+    await request(app).get('/api/relatorios/consumo-agua').query({ de: '2026-12-01', ate: '2026-01-01' }).expect(400);
+  });
+
+  test('procedure sp_resumo_safra e função fn_m3_agua_por_tonelada', async () => {
+    const res = await request(app).get('/api/relatorios/safras/1').expect(200);
+    assert.equal(res.body.data.agua_m3, 9000);
+    assert.equal(res.body.data.m3_agua_por_tonelada, 27.11); // 9000 m³ / 332 t
+    await request(app).get('/api/relatorios/safras/9999').expect(400);
+  });
+
+  test('procedure sp_registrar_colheita grava e impede colheita duplicada', async () => {
+    const res = await request(app).post('/api/relatorios/safras/5/colheita').send({ quantidade_colhida_kg: 33000 }).expect(200);
+    assert.equal(res.body.data.kg_por_ha, 3300);
+    const [s] = await query('SELECT quantidade_colhida_kg FROM safra WHERE id_safra = 5');
+    assert.equal(s.quantidade_colhida_kg, 33000);
+    const dup = await request(app).post('/api/relatorios/safras/5/colheita').send({ quantidade_colhida_kg: 1 }).expect(400);
+    assert.match(dup.body.error, /já teve a colheita/);
+    await request(app).post('/api/relatorios/safras/7/colheita').send({ quantidade_colhida_kg: -1 }).expect(400);
   });
 });
 
