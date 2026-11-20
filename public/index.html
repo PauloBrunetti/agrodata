@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgroData — Gestão agrícola sustentável</title>
+  <meta name="description" content="AgroData: plataforma de gestão de propriedades, talhões, safras, irrigação e manejo agrícola integrada ao MySQL.">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+      <a class="brand" href="#/dashboard">
+        <img src="img/favicon.svg" alt="" width="28" height="28">
+        <span>AgroData</span>
+      </a>
+      <nav id="nav"></nav>
+      <p class="sidebar-foot">Dados de demonstração fictícios · Projeto acadêmico A3</p>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Abrir menu" aria-expanded="false">☰</button>
+        <h1 id="pageTitle">AgroData</h1>
+        <span class="db-status" id="dbStatus" title="Status da conexão com o MySQL">…</span>
+      </header>
+      <main id="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <dialog id="formDialog" aria-labelledby="formTitle">
+    <form id="recordForm" novalidate>
+      <header class="dialog-head">
+        <h2 id="formTitle">Novo registro</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Fechar">✕</button>
+      </header>
+      <div class="form-error" id="formError" role="alert" hidden></div>
+      <div class="form-grid" id="formFields"></div>
+      <footer class="dialog-foot">
+        <button type="button" class="btn ghost" data-close>Cancelar</button>
+        <button type="submit" class="btn primary" id="saveBtn">Salvar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle">
+    <div class="dialog-body">
+      <h2 id="confirmTitle">Confirmar exclusão</h2>
+      <p id="confirmText"></p>
+    </div>
+    <footer class="dialog-foot">
+      <button type="button" class="btn ghost" data-close>Cancelar</button>
+      <button type="button" class="btn danger" id="confirmBtn">Excluir</button>
+    </footer>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="vendor/chart.umd.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/resource.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
