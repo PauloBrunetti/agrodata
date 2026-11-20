@@ -70,7 +70,7 @@ Decisão de modelagem: irrigação, ocorrências, aplicações e recomendações
 ### 2.3 Restrições de integridade
 
 - **Chaves primárias** `AUTO_INCREMENT` em todas as entidades; PK composta nas associativas (`cultivo_praga`, `defensivo_praga`).
-- **Chaves estrangeiras** em todos os relacionamentos (17 FKs). Exclusão de registro pai com filhos é bloqueada (`RESTRICT`), por exemplo uma propriedade com talhões.
+- **Chaves estrangeiras** em todos os relacionamentos (19 FKs). Exclusão de registro pai com filhos é bloqueada (`RESTRICT`), por exemplo uma propriedade com talhões.
 - **UNIQUE**: `praga.nome_cientifico`, `tipo_sensor.nome`, `usuario.email`.
 - **CHECK**: áreas > 0, ciclo > 0, volume e duração de irrigação > 0, quantidade de defensivo > 0, classe toxicológica entre 1 e 5, carência ≥ 0, precipitação ≥ 0, colheita prevista ≥ plantio.
 - **ENUM** para domínios fechados: método de irrigação, nível de infestação, status de sensor, tipo/prioridade/status de recomendação, perfil de usuário.
