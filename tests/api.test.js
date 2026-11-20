@@ -303,6 +303,19 @@ describe('dashboard (indicadores calculados no MySQL)', () => {
     assert.ok(res.body.consultas.every((c) => /SELECT/i.test(c.sql)));
   });
 
+  test('KPIs do topo e pizza de água por método conferem com o banco', async () => {
+    const res = await request(app).get('/api/dashboard').expect(200);
+    const I = res.body.indicadores;
+    const [prod] = await query('SELECT SUM(quantidade_colhida_kg) AS kg FROM safra');
+    assert.equal(I.kpis.producao_colhida_kg, prod.kg);
+    const [media] = await query('SELECT ROUND(AVG(pct_do_esperado), 1) AS m FROM vw_produtividade_safra');
+    assert.equal(I.kpis.produtividade_media_pct, media.m);
+    const soma = I.agua_por_metodo.reduce((a, r) => a + r.volume_m3, 0);
+    assert.equal(soma, I.kpis.agua_total_m3);
+    const pct = I.agua_por_metodo.reduce((a, r) => a + r.pct, 0);
+    assert.ok(Math.abs(pct - 100) < 0.5);
+  });
+
   test('consumo por talhão soma o total geral', async () => {
     const res = await request(app).get('/api/dashboard').expect(200);
     const soma = res.body.indicadores.consumo_por_talhao.reduce((a, r) => a + r.volume_m3, 0);
