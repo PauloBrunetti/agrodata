@@ -3,7 +3,7 @@
 Ambiente: Node.js 22, MySQL 8.0.46 (binary log ativo), executado em 20/11/2026.
 Comando: `npm test` (banco `agrodata_test`, recriado a partir dos scripts `database/01` a `06`).
 
-## Resultado: 37 de 37 testes aprovados
+## Resultado: 38 de 38 testes aprovados
 
 | Grupo | Caso de teste | Resultado |
 |---|---|---|
@@ -41,6 +41,7 @@ Comando: `npm test` (banco `agrodata_test`, recriado a partir dos scripts `datab
 | triggers, procedures e auditoria | procedure sp_resumo_safra e função fn_m3_agua_por_tonelada | ✅ aprovado |
 | triggers, procedures e auditoria | procedure sp_registrar_colheita grava e impede colheita duplicada | ✅ aprovado |
 | dashboard (indicadores calculados no MySQL) | KPIs batem com consultas diretas ao banco | ✅ aprovado |
+| dashboard (indicadores calculados no MySQL) | KPIs do topo e pizza de água por método conferem com o banco | ✅ aprovado |
 | dashboard (indicadores calculados no MySQL) | consumo por talhão soma o total geral | ✅ aprovado |
 | dashboard (indicadores calculados no MySQL) | filtro por propriedade restringe os indicadores | ✅ aprovado |
 | dashboard (indicadores calculados no MySQL) | produtividade calcula kg/ha da safra 1 (332 t em 100 ha) | ✅ aprovado |
@@ -48,9 +49,9 @@ Comando: `npm test` (banco `agrodata_test`, recriado a partir dos scripts `datab
 ## Saída do terminal (resumo)
 
 ```
-# tests 37
+# tests 38
 # suites 5
-# pass 37
+# pass 38
 # fail 0
 ```
 
