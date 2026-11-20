@@ -1,0 +1,28 @@
+{
+  "name": "agrodata",
+  "version": "1.0.0",
+  "description": "AgroData — plataforma web de gestão agrícola sustentável (Node.js + Express + MySQL)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:init": "node scripts/db-init.js",
+    "db:seed": "node scripts/db-init.js --seed-only",
+    "test": "node --test --test-concurrency=1 tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "chart.js": "^4.6.1",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "mysql2": "^3.24.6"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.2"
+  },
+  "private": true
+}
