@@ -7,6 +7,7 @@ const { createCrudRouter, publicMeta } = require('./lib/crud');
 const { errorHandler } = require('./lib/errors');
 const { query } = require('./lib/db');
 const dashboardRouter = require('./routes/dashboard');
+const relatoriosRouter = require('./routes/relatorios');
 
 function createApp() {
   const app = express();
@@ -35,6 +36,7 @@ function createApp() {
   const meta = publicMeta(resources);
   api.get('/meta', (req, res) => res.json(meta));
   api.use('/dashboard', dashboardRouter);
+  api.use('/relatorios', relatoriosRouter);
   for (const [name, def] of Object.entries(resources)) {
     api.use(`/${name}`, createCrudRouter(name, def));
   }

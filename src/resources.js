@@ -432,6 +432,30 @@ const resources = {
     optionLabel: "CONCAT(x.nome, ' (', x.perfil, ')')",
     order: 'x.nome',
   },
+  auditoria: {
+    table: 'auditoria', pk: 'id_auditoria', label: 'Auditoria', singular: 'Registro de auditoria', group: 'Administração',
+    readOnly: true,
+    fields: [],
+    from: 'auditoria x',
+    columns: [
+      { key: 'id_auditoria', label: 'ID', sql: 'x.id_auditoria', type: 'int' },
+      { key: 'data_hora', label: 'Data/hora', sql: 'x.data_hora', type: 'datetime' },
+      { key: 'tabela', label: 'Tabela', sql: 'x.tabela' },
+      { key: 'operacao', label: 'Operação', sql: 'x.operacao', type: 'badge' },
+      { key: 'id_registro', label: 'Registro', sql: 'x.id_registro', type: 'int' },
+      { key: 'usuario_banco', label: 'Usuário (MySQL)', sql: 'x.usuario_banco' },
+      { key: 'dados_antigos', label: 'Antes', sql: 'CAST(x.dados_antigos AS CHAR)', type: 'json' },
+      { key: 'dados_novos', label: 'Depois', sql: 'CAST(x.dados_novos AS CHAR)', type: 'json' },
+    ],
+    filters: [
+      { param: 'tabela', sql: 'x.tabela', type: 'enum', options: ['irrigacao', 'aplicacao_defensivo', 'safra'], label: 'Tabela' },
+      { param: 'operacao', sql: 'x.operacao', type: 'enum', options: ['INSERT', 'UPDATE', 'DELETE'], label: 'Operação' },
+      { param: 'de', sql: 'DATE(x.data_hora)', op: '>=', type: 'date', label: 'De' },
+      { param: 'ate', sql: 'DATE(x.data_hora)', op: '<=', type: 'date', label: 'Até' },
+    ],
+    search: ['x.usuario_banco', 'x.tabela'],
+    order: 'x.id_auditoria DESC',
+  },
 };
 
 module.exports = resources;
