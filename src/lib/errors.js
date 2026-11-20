@@ -26,6 +26,10 @@ function errorHandler(err, req, res, _next) {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'JSON inválido no corpo da requisição' });
   }
+  // Regras de negócio dos TRIGGERS / PROCEDURES (SIGNAL SQLSTATE '45000')
+  if (err.code === 'ER_SIGNAL_EXCEPTION') {
+    return res.status(400).json({ error: err.sqlMessage, code: err.code, origem: 'banco de dados' });
+  }
   const mapped = err.code && MYSQL_ERRORS[err.code];
   if (mapped) {
     return res.status(mapped[0]).json({ error: mapped[1], code: err.code });

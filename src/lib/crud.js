@@ -93,6 +93,12 @@ function createCrudRouter(name, def) {
     res.json(await findRow(parseId(req.params.id)));
   });
 
+  if (def.readOnly) {
+    // recurso somente leitura (ex.: auditoria)
+    router.all(['/', '/:id'], (req, res) => res.status(405).json({ error: 'Recurso somente leitura' }));
+    return router;
+  }
+
   router.post('/', async (req, res) => {
     const { data, errors } = validateBody(def.fields, req.body);
     if (Object.keys(errors).length) throw new HttpError(400, 'Dados inválidos', errors);
@@ -148,6 +154,7 @@ function publicMeta(resources) {
       filters: (def.filters || []).map(({ param, label, ref, type, options }) => ({ param, label, ref, type, options })),
       searchable: Boolean(def.search && def.search.length),
       hasSummary: Boolean(def.summary),
+      readOnly: Boolean(def.readOnly),
     };
   }
   return out;
