@@ -64,9 +64,6 @@ window.Dashboard = (() => {
     const warnC = css('--status-warning'), serC = css('--status-serious'), critC = css('--status-critical');
     const surface = css('--surface');
 
-    const kpi = (lbl, value, unit, hint) => `<div class="card kpi"><div class="label">${esc(lbl)}</div>
-      <div class="value">${value}${unit ? `<small>${esc(unit)}</small>` : ''}</div>${hint ? `<div class="hint">${esc(hint)}</div>` : ''}</div>`;
-
     const umid = I.umidade_solo.map((r) => {
       const diff = r.umidade_ideal_pct == null ? null : r.umidade_pct - r.umidade_ideal_pct;
       let st = '<span class="badge">Sem safra ativa</span>';
@@ -78,23 +75,85 @@ window.Dashboard = (() => {
       return { ...r, st };
     });
 
+    // ---------- Hero: fazenda ao fundo com indicadores em vidro na frente ----------
+    const ICON = {
+      prod: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+      agua: '<path d="M12 3c3.5 4.2 6 7.4 6 10.5A6 6 0 0 1 6 13.5C6 10.4 8.5 7.2 12 3z"/>',
+      area: '<path d="M4 20c4-1 6-5 8-9s5-6 8-7c-1 6-3 10-7 13s-7 3-9 3z"/><path d="M4 20l7-7"/>',
+      safra: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+      def: '<path d="M10 3h4v4l3 3v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9l3-3z"/><path d="M7 13h10"/>',
+      praga: '<ellipse cx="12" cy="13" rx="4" ry="6"/><path d="M12 7V4M8 9 5 7M16 9l3-2M8 14H4M16 14h4M8 18l-3 2M16 18l3 2"/>',
+      rec: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+    };
+    const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+    const pct = Math.max(0, Math.min(Number(k.produtividade_media_pct) || 0, 100));
+    const R = 54, C = 2 * Math.PI * R;
+    const meses = I.consumo_mensal.map((r) => r.volume_m3);
+    const spark = (() => {
+      if (meses.length < 2) return '';
+      const max = Math.max(...meses), w = 160, h = 40;
+      const pts = meses.map((v, i) => `${(i / (meses.length - 1)) * w},${h - (v / max) * (h - 4) - 2}`).join(' ');
+      return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+    })();
+    const colhidas = I.produtividade.length;
+    const metodoCor = { aspersao: '#3987e5', gotejamento: '#d95926', sulco: '#199e70' };
+    const mini = (ic, lbl, val, sub) => `<div class="glass mini">${icon(ic)}<div><span>${esc(lbl)}</span><b>${val}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>`;
+    const atualizado = new Date(res.gerado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
     view.innerHTML = `
-      <div class="dash-filters">
-        <label class="field-inline" for="dashProp">Propriedade
-          <select class="input" id="dashProp"><option value="">Todas as propriedades</option>
-          ${props.map((p) => `<option value="${p.id}" ${String(p.id) === String(params.id_propriedade || '') ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}
-          </select></label>
-        <span class="muted" style="font-size:12.5px">Atualizado em ${esc(datetime(res.gerado_em.replace('T', ' ')))} (UTC) · fonte: MySQL</span>
-      </div>
-      <div class="kpis">
-        ${kpi('Propriedades', num(k.propriedades, 0))}
-        ${kpi('Talhões', num(k.talhoes, 0), '', `${num(k.area_talhoes_ha, 1)} ha cadastrados`)}
-        ${kpi('Safras em andamento', num(k.safras_em_andamento, 0))}
-        ${kpi('Água total irrigada', num(k.agua_total_m3, 0), 'm³', `${num(k.agua_30d_m3, 0)} m³ nos últimos 30 dias`)}
-        ${kpi('Defensivos aplicados', num(k.defensivos_total_l, 1), 'L')}
-        ${kpi('Ocorrências nível alto', num(k.ocorrencias_nivel_alto, 0))}
-        ${kpi('Recomendações pendentes', num(k.recomendacoes_pendentes, 0))}
-      </div>
+      <section class="hero" aria-label="Resumo da produção">
+        <div class="hero-head">
+          <div>
+            <span class="eyebrow">Gestão inteligente</span>
+            <h2>Visão geral da produção</h2>
+            <p>Indicadores calculados agora, direto do MySQL · ${esc(atualizado)}</p>
+          </div>
+          <label class="glass-select" for="dashProp"><span>Propriedade</span>
+            <select id="dashProp"><option value="">Todas as propriedades</option>
+            ${props.map((p) => `<option value="${p.id}" ${String(p.id) === String(params.id_propriedade || '') ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}
+            </select></label>
+        </div>
+        <div class="hero-grid">
+          <div class="glass gauge-card">
+            <div class="gauge" role="img" aria-label="Produtividade média: ${num(k.produtividade_media_pct, 1)}% da meta">
+              <svg viewBox="0 0 128 128" aria-hidden="true">
+                <circle cx="64" cy="64" r="${R}" class="track"/>
+                <circle cx="64" cy="64" r="${R}" class="bar" stroke-dasharray="${(pct / 100) * C} ${C}"/>
+              </svg>
+              <div class="gauge-val"><span>${k.produtividade_media_pct == null ? '—' : `${num(k.produtividade_media_pct, 1)}<small>%</small>`}</span></div>
+            </div>
+            <div><span class="g-label">Produtividade média</span><b class="g-title">da meta por talhão</b>
+              <small>kg/ha obtido ÷ esperado · ${colhidas} safra(s) colhida(s)</small></div>
+          </div>
+          <div class="glass big">
+            ${icon('prod')}<span>Produção colhida</span>
+            <b>${num(k.producao_colhida_kg / 1000, 0)}<small> t</small></b>
+            <small>${num(k.area_em_cultivo_ha, 0)} ha com safras em andamento</small>
+          </div>
+          <div class="glass big">
+            ${icon('agua')}<span>Água irrigada</span>
+            <b>${num(k.agua_total_m3, 0)}<small> m³</small></b>
+            <small>${num(k.agua_30d_m3, 0)} m³ nos últimos 30 dias</small>
+            ${spark}
+          </div>
+          <div class="glass donut-card">
+            <span class="d-title">Uso de água por método</span>
+            <div class="donut-wrap">
+              <div class="donut"><canvas id="ch_metodo" aria-label="Gráfico de pizza: participação de cada método no volume de água irrigada"></canvas>
+                <div class="donut-center"><b>${num(k.agua_total_m3 / 1000, 1)}</b><small>mil m³</small></div></div>
+              <ul class="d-legend">${I.agua_por_metodo.map((m) => `<li><i style="background:${metodoCor[m.metodo]}"></i>
+                <span>${esc(label(m.metodo))}</span><b>${num(m.pct, 1)}%</b><small>${num(m.volume_m3, 0)} m³</small></li>`).join('') || '<li>Sem irrigações</li>'}</ul>
+            </div>
+          </div>
+        </div>
+        <div class="hero-minis">
+          ${mini('area', 'Talhões', `${num(k.talhoes, 0)}`, `${num(k.area_talhoes_ha, 0)} ha em ${num(k.propriedades, 0)} propriedade(s)`)}
+          ${mini('safra', 'Safras em andamento', num(k.safras_em_andamento, 0))}
+          ${mini('def', 'Defensivos aplicados', `${num(k.defensivos_total_l, 0)} L`)}
+          ${mini('praga', 'Ocorrências nível alto', num(k.ocorrencias_nivel_alto, 0))}
+          ${mini('rec', 'Recomendações pendentes', num(k.recomendacoes_pendentes, 0))}
+        </div>
+      </section>
       <div class="grid-2">
         ${card('consumo_mensal', 'Consumo de água por mês', 'm³ por método de irrigação — últimos 12 meses',
           `${legend([['Aspersão', s1], ['Gotejamento', s2], ['Sulco', s3]])}<div class="chart-box"><canvas id="ch_mensal" aria-label="Gráfico de consumo mensal de água"></canvas></div>`, { table: true })}
@@ -142,6 +201,11 @@ window.Dashboard = (() => {
       <p class="note">Todos os números acima são calculados no momento da consulta, diretamente sobre os registros do MySQL. Os dados cadastrados na base de demonstração são fictícios.</p>`;
 
     // SQL de cada indicador
+    // SQL do donut e dos KPIs do topo
+    const sqlHero = res.consultas.filter((c) => ['kpis', 'agua_por_metodo'].includes(c.id));
+    view.querySelector('.hero').insertAdjacentHTML('beforeend', `<details class="hero-sql"><summary>Ver SQL dos indicadores do topo</summary>${sqlHero.map((c) => `<p>${esc(c.titulo)}</p><pre class="sql"></pre>`).join('')}</details>`);
+    view.querySelectorAll('.hero-sql pre').forEach((el, i) => { el.textContent = sqlHero[i].sql; });
+
     res.consultas.forEach((c) => {
       const el = view.querySelector(`#sql_${c.id}`);
       if (el) el.textContent = c.sql;
@@ -177,6 +241,28 @@ window.Dashboard = (() => {
     // Gráficos
     const bar = { borderRadius: 4, borderSkipped: false, maxBarThickness: 36, borderColor: surface, borderWidth: 1 };
     const mesLabel = (m) => { const [y, mm] = m.split('-'); return `${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(mm) - 1]}/${y.slice(2)}`; };
+
+    if (I.agua_por_metodo.length) {
+      charts.push(new Chart(view.querySelector('#ch_metodo'), {
+        type: 'doughnut',
+        data: {
+          labels: I.agua_por_metodo.map((m) => label(m.metodo)),
+          datasets: [{
+            data: I.agua_por_metodo.map((m) => m.volume_m3),
+            backgroundColor: I.agua_por_metodo.map((m) => metodoCor[m.metodo]),
+            borderColor: 'rgba(12, 22, 12, 0.85)', borderWidth: 2, hoverOffset: 6,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: true, cutout: '68%', animation: { duration: 400 },
+          plugins: {
+            legend: { display: false },
+            tooltip: { ...baseOptions().plugins.tooltip, callbacks: {
+              label: (c) => { const m = I.agua_por_metodo[c.dataIndex]; return ` ${num(m.volume_m3, 0)} m³ (${num(m.pct, 1)}%) · ${m.eventos} irrigações`; } } },
+          },
+        },
+      }));
+    }
 
     charts.push(new Chart(view.querySelector('#ch_mensal'), {
       type: 'bar',
