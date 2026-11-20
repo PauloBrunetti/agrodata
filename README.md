@@ -17,7 +17,7 @@ Plataforma web para gestão agrícola por talhão: propriedades, talhões, safra
 
 | Módulo | O que faz |
 |---|---|
-| **Dashboard** | Indicadores calculados em tempo real por consultas SQL: água irrigada (total, 30 dias, por mês e método, m³/ha por talhão), produtividade das safras (kg/ha × esperado e m³ de água por tonelada), ocorrências de pragas por nível, uso de defensivos (L/ha), umidade do solo × ideal do cultivo, safras em carência e recomendações pendentes. Filtro por propriedade. Cada card mostra o **SQL usado** e uma **tabela alternativa** ao gráfico. |
+| **Dashboard** | Painel de abertura com uma fazenda ao fundo e os números em destaque: produtividade média em relação à meta (medidor), produção colhida, água irrigada com tendência mensal e gráfico de pizza do uso de água por método. Abaixo, indicadores calculados em tempo real por consultas SQL: água irrigada (total, 30 dias, por mês e método, m³/ha por talhão), produtividade das safras (kg/ha × esperado e m³ de água por tonelada), ocorrências de pragas por nível, uso de defensivos (L/ha), umidade do solo × ideal do cultivo, safras em carência e recomendações pendentes. Filtro por propriedade. Cada card mostra o **SQL usado** e uma **tabela alternativa** ao gráfico. |
 | **Relatórios (stored procedures)** | Consumo de água por período e resumo de sustentabilidade da safra, calculados por procedures no MySQL. O botão **Colher** em Safras executa `sp_registrar_colheita`. |
 | **Auditoria** | Histórico (antes/depois em JSON) de toda inclusão, alteração e exclusão de irrigações, aplicações de defensivos e safras, gravado por triggers. Somente leitura. |
 | **Recomendações automáticas** | Triggers criam recomendações quando uma praga é registrada em nível alto ou quando a umidade do solo fica abaixo do ideal do cultivo. |
@@ -66,7 +66,7 @@ src/
   routes/relatorios.js     chamadas às stored procedures
   lib/                     conexão, CRUD genérico, validação, erros, inicialização do banco
 public/                    frontend (index.html, css, js)
-tests/api.test.js          37 testes de integração
+tests/api.test.js          38 testes de integração
 docs/banco-de-dados.md     modelagem, normalização, índices, triggers, procedures, segurança e backup
 docs/testes.md             evidências de testes e capturas de tela
 ```
@@ -146,7 +146,7 @@ Códigos de erro: `400` dados inválidos (com `details` por campo, ou a mensagem
 
 ## Testes
 
-`npm test` executa 37 testes de integração contra um MySQL real: estrutura do banco, CRUD ponta a ponta (formulário → API → MySQL → leitura), validações, chaves estrangeiras, triggers (regras, auditoria e recomendações automáticas), stored procedures, filtros e a conferência dos indicadores do dashboard com consultas diretas ao banco. Resultado e evidências em [`docs/testes.md`](docs/testes.md).
+`npm test` executa 38 testes de integração contra um MySQL real: estrutura do banco, CRUD ponta a ponta (formulário → API → MySQL → leitura), validações, chaves estrangeiras, triggers (regras, auditoria e recomendações automáticas), stored procedures, filtros e a conferência dos indicadores do dashboard com consultas diretas ao banco. Resultado e evidências em [`docs/testes.md`](docs/testes.md).
 
 ## Segurança
 
