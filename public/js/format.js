@@ -18,6 +18,7 @@ window.Fmt = (() => {
     pendente: 'warn', aceita: 'info', recusada: '', concluida: 'good',
     ativo: 'good', inativo: '', manutencao: 'warn',
     colhida: 'good', 'em andamento': 'info',
+    INSERT: 'good', UPDATE: 'info', DELETE: 'bad',
   };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const label = (v) => LABELS[v] || v;
@@ -38,6 +39,12 @@ window.Fmt = (() => {
       case 'enum': return esc(label(v));
       case 'badge': return `<span class="badge ${BADGE[v] || ''}">${esc(label(v))}</span>`;
       case 'italic': return `<i>${esc(v)}</i>`;
+      case 'json': {
+        try {
+          const o = JSON.parse(v);
+          return `<span class="json">${Object.entries(o).map(([k, val]) => `<span><b>${esc(k)}</b>: ${esc(val ?? '—')}</span>`).join('')}</span>`;
+        } catch { return esc(v); }
+      }
       default: return esc(v);
     }
   }

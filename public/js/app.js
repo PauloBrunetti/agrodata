@@ -9,7 +9,7 @@
   backdrop.className = 'backdrop';
   document.body.appendChild(backdrop);
 
-  const GROUP_ORDER = ['Áreas', 'Produção', 'Manejo', 'Monitoramento', 'Cadastros base'];
+  const GROUP_ORDER = ['Áreas', 'Produção', 'Manejo', 'Monitoramento', 'Cadastros base', 'Administração'];
   let meta;
 
   function toggleMenu(open) {
@@ -35,7 +35,8 @@
   function buildNav() {
     const groups = {};
     Object.entries(meta).forEach(([name, def]) => { (groups[def.group] = groups[def.group] || []).push([name, def]); });
-    nav.innerHTML = `<a class="nav-link" href="#/dashboard" data-route="dashboard">Dashboard</a>` +
+    nav.innerHTML = `<a class="nav-link" href="#/dashboard" data-route="dashboard">Dashboard</a>
+      <a class="nav-link" href="#/relatorios" data-route="relatorios">Relatórios</a>` +
       GROUP_ORDER.filter((g) => groups[g]).map((g) => `<div class="nav-group">${Fmt.esc(g)}</div>` +
         groups[g].map(([name, def]) => `<a class="nav-link" href="#/r/${name}" data-route="r/${name}">${Fmt.esc(def.label)}</a>`).join('')).join('');
   }
@@ -58,6 +59,10 @@
         titleEl.textContent = 'Dashboard';
         document.title = 'Dashboard · AgroData';
         await Dashboard.render(view, params);
+      } else if (path === 'relatorios') {
+        titleEl.textContent = 'Relatórios';
+        document.title = 'Relatórios · AgroData';
+        await Relatorios.render(view, params);
       } else if (path.startsWith('r/') && meta[path.slice(2)]) {
         const name = path.slice(2);
         titleEl.textContent = meta[name].label;

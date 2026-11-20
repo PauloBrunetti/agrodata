@@ -51,13 +51,13 @@ window.ResourcePage = (() => {
           <input class="input search" id="q" type="search" placeholder="Digite para pesquisar…" value="${esc(state.q)}"></label>` : '<span class="grow"></span>'}
         ${filterControls.join('')}
         <button class="btn ghost" id="clearBtn" type="button">Limpar</button>
-        <button class="btn primary" id="newBtn" type="button">+ ${esc(def.singular)}</button>
+        ${def.readOnly ? '<span class="badge info">Somente leitura</span>' : `<button class="btn primary" id="newBtn" type="button">+ ${esc(def.singular)}</button>`}
       </div>
       <div class="summary" id="summary"></div>
       <div class="card">
         <div class="table-wrap"><table>
-          <thead><tr>${def.columns.map((c) => `<th class="sortable ${['int', 'decimal'].includes(c.type) ? 'num' : ''}" data-key="${c.key}" scope="col">${esc(c.label)}<span class="arrow"></span></th>`).join('')}<th><span class="sr-only">Ações</span></th></tr></thead>
-          <tbody id="rows"><tr><td colspan="${def.columns.length + 1}"><div class="skeleton"></div></td></tr></tbody>
+          <thead><tr>${def.columns.map((c) => `<th class="sortable ${['int', 'decimal'].includes(c.type) ? 'num' : ''}" data-key="${c.key}" scope="col">${esc(c.label)}<span class="arrow"></span></th>`).join('')}${def.readOnly ? '' : '<th><span class="sr-only">Ações</span></th>'}</tr></thead>
+          <tbody id="rows"><tr><td colspan="${def.columns.length + (def.readOnly ? 0 : 1)}"><div class="skeleton"></div></td></tr></tbody>
         </table></div>
         <div class="pager" id="pager"></div>
       </div>`;
@@ -85,14 +85,15 @@ window.ResourcePage = (() => {
       try {
         const res = await Api.get(`/${name}`, { q: state.q, page: state.page, limit: 20, sort: state.sort, dir: state.dir, ...state.filters });
         if (!res.data.length) {
-          rowsEl.innerHTML = `<tr><td colspan="${def.columns.length + 1}" class="empty">Nenhum registro encontrado.</td></tr>`;
+          rowsEl.innerHTML = `<tr><td colspan="${def.columns.length + (def.readOnly ? 0 : 1)}" class="empty">Nenhum registro encontrado.</td></tr>`;
         } else {
           rowsEl.innerHTML = res.data.map((r) => `<tr>
             ${def.columns.map((c) => `<td class="${['int', 'decimal'].includes(c.type) ? 'num' : ''}">${cell(c.type, r[c.key])}</td>`).join('')}
-            <td class="actions">
+            ${def.readOnly ? '' : `<td class="actions">
+              ${name === 'safras' && r.quantidade_colhida_kg == null ? `<button class="btn sm" data-colher="${r[def.pk]}" type="button" title="Executa a procedure sp_registrar_colheita">Colher</button>` : ''}
               <button class="btn sm" data-edit="${r[def.pk]}" type="button">Editar</button>
               <button class="btn sm ghost" data-del="${r[def.pk]}" type="button" aria-label="Excluir registro ${r[def.pk]}">Excluir</button>
-            </td></tr>`).join('');
+            </td>`}</tr>`).join('');
         }
         const sums = Object.entries(res.summary || {}).map(([k, v]) =>
           `<span class="chip">${esc(SUMMARY_LABELS[k] || k)}: <b>${Fmt.num(v ?? 0, 2)}</b></span>`);
@@ -103,7 +104,7 @@ window.ResourcePage = (() => {
         pagerEl.querySelector('#prev').onclick = () => { state.page -= 1; load(); };
         pagerEl.querySelector('#next').onclick = () => { state.page += 1; load(); };
       } catch (e) {
-        rowsEl.innerHTML = `<tr><td colspan="${def.columns.length + 1}" class="empty">Erro ao carregar: ${esc(e.message)}</td></tr>`;
+        rowsEl.innerHTML = `<tr><td colspan="${def.columns.length + (def.readOnly ? 0 : 1)}" class="empty">Erro ao carregar: ${esc(e.message)}</td></tr>`;
       }
     }
 
@@ -120,10 +121,12 @@ window.ResourcePage = (() => {
       else { state.sort = th.dataset.key; state.dir = 'asc'; }
       load();
     }));
-    view.querySelector('#newBtn').onclick = () => openForm(name, def, null, load);
+    if (!def.readOnly) view.querySelector('#newBtn').onclick = () => openForm(name, def, null, load);
     rowsEl.addEventListener('click', async (e) => {
       const edit = e.target.closest('[data-edit]');
       const del = e.target.closest('[data-del]');
+      const colher = e.target.closest('[data-colher]');
+      if (colher) { openColheita(colher.dataset.colher, load); return; }
       if (edit) {
         try { openForm(name, def, await Api.get(`/${name}/${edit.dataset.edit}`), load); } catch (err) { toast(err.message, 'error'); }
       } else if (del) {
@@ -224,6 +227,32 @@ window.ResourcePage = (() => {
         toast(err.message, 'error');
       } finally {
         d.close();
+      }
+    };
+  }
+
+  // Registrar colheita: chama a procedure sp_registrar_colheita via API
+  function openColheita(idSafra, onDone) {
+    const d = document.getElementById('colheitaDialog');
+    const input = document.getElementById('colheitaKg');
+    const err = document.getElementById('colheitaError');
+    document.getElementById('colheitaTitle').textContent = `Registrar colheita da safra #${idSafra}`;
+    input.value = '';
+    err.hidden = true;
+    d.showModal();
+    input.focus();
+    document.getElementById('colheitaForm').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        const res = await Api.post(`/relatorios/safras/${idSafra}/colheita`, { quantidade_colhida_kg: input.value });
+        const r = res.data;
+        d.close();
+        toast(`Colheita registrada: ${Fmt.num(r.kg_por_ha, 0)} kg/ha (${Fmt.num(r.pct_esperado, 1)}% do esperado)`);
+        invalidate('safras');
+        onDone();
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.hidden = false;
       }
     };
   }
